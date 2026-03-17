@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Horizons | Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #eef1f7;
+  --surface:    #ffffff;
+  --surface2:   #f4f6fb;
+  --border:     rgba(60,80,120,0.11);
+  --border-hi:  rgba(60,80,120,0.22);
+  --text:       #1e2535;
+  --muted:      #6b7280;
+  --faint:      #c2c8d4;
+  --blue:       #5b8dee;
+  --blue-dim:   rgba(91,141,238,0.14);
+  --blue-glow:  rgba(91,141,238,0.28);
+  --green:      #2da87a;
+  --green-dim:  rgba(45,168,122,0.14);
+  --green-glow: rgba(45,168,122,0.28);
+  --amber:      #d4865a;
+  --amber-dim:  rgba(212,134,90,0.14);
+  --amber-glow: rgba(212,134,90,0.28);
+  --active-color: var(--blue);
+  --active-dim:   var(--blue-dim);
+  --active-glow:  var(--blue-glow);
+}
+
+html, body { height: 100%; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #eef1f7;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.stars span {
+  position: absolute; border-radius: 50%;
+  background: rgba(100,120,160,0.18);
+  animation: twinkle var(--d, 3s) var(--delay, 0s) ease-in-out infinite alternate;
+  opacity: 0;
+}
+@keyframes twinkle { from { opacity: 0; } to { opacity: var(--o, 0.4); } }
+
+.orb {
+  position: fixed; width: 600px; height: 600px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(91,141,238,0.06) 0%, transparent 70%);
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  pointer-events: none; z-index: 0; transition: background 0.5s ease;
+}
+
+.card {
+  position: relative; z-index: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  width: 100%; max-width: 440px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.9), 0 20px 40px rgba(30,50,100,0.08), 0 4px 12px rgba(30,50,100,0.05);
+  overflow: hidden;
+  animation: rise 0.55s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(24px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.brand {
+  padding: 2rem 2rem 1.6rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 1rem;
+}
+.brand-mark {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: linear-gradient(135deg, #5b8dee, #85b0f5);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; box-shadow: 0 4px 16px rgba(91,141,238,0.35);
+  font-size: 1.3rem; transition: box-shadow 0.4s ease, background 0.4s ease;
+}
+.brand-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.6rem; font-weight: 600;
+  color: var(--text); letter-spacing: -0.01em; line-height: 1;
+}
+.brand-sub { font-size: 0.71rem; color: var(--muted); margin-top: 0.25rem; letter-spacing: 0.03em; font-weight: 300; }
+
+.body { padding: 1.6rem 2rem 2rem; }
+
+.roles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; margin-bottom: 1.6rem; }
+.role-btn {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 0.85rem 0.5rem 0.75rem; text-align: center; cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s, box-shadow 0.2s;
+  position: relative; overflow: hidden;
+}
+.role-btn:hover { border-color: var(--border-hi); transform: translateY(-1px); }
+.role-btn.active-parent   { border-color: var(--blue);  background: var(--blue-dim);  box-shadow: 0 0 20px var(--blue-glow),  inset 0 1px 0 rgba(77,158,247,0.2); }
+.role-btn.active-teacher  { border-color: var(--green); background: var(--green-dim); box-shadow: 0 0 20px var(--green-glow), inset 0 1px 0 rgba(63,185,80,0.2); }
+.role-btn.active-principal{ border-color: var(--amber); background: var(--amber-dim); box-shadow: 0 0 20px var(--amber-glow), inset 0 1px 0 rgba(227,179,65,0.2); }
+
+.role-icon { font-size: 1.4rem; margin-bottom: 0.4rem; }
+.role-name { font-size: 0.75rem; font-weight: 500; color: var(--muted); letter-spacing: 0.02em; transition: color 0.2s; }
+.active-parent    .role-name { color: var(--blue); }
+.active-teacher   .role-name { color: var(--green); }
+.active-principal .role-name { color: var(--amber); }
+.role-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--faint); margin: 0.4rem auto 0; transition: background 0.2s, box-shadow 0.2s; }
+.active-parent    .role-dot { background: var(--blue);  box-shadow: 0 0 6px var(--blue); }
+.active-teacher   .role-dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.active-principal .role-dot { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+
+.divider { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.4rem; }
+.div-line { flex: 1; height: 1px; background: var(--border); }
+.div-label { font-size: 0.67rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; font-weight: 400; }
+
+.form-head { margin-bottom: 1.2rem; }
+.form-title { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; font-weight: 600; color: var(--text); line-height: 1.2; }
+.form-desc  { font-size: 0.75rem; color: var(--muted); margin-top: 0.25rem; font-weight: 300; line-height: 1.5; }
+
+.field { margin-bottom: 1rem; }
+.field label { display: block; font-size: 0.68rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
+.field input {
+  width: 100%; background: #eef1f7; border: 1px solid var(--border); border-radius: 8px;
+  padding: 0.72rem 0.9rem; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--text);
+  outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.field input::placeholder { color: var(--faint); }
+.field input:focus { border-color: var(--active-color); box-shadow: 0 0 0 3px var(--active-glow); }
+
+.btn {
+  width: 100%; margin-top: 0.4rem; padding: 0.8rem 1rem; border: none; border-radius: 8px;
+  font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500;
+  cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+  letter-spacing: 0.02em; transition: transform 0.15s, filter 0.15s, box-shadow 0.2s;
+}
+.btn:hover  { transform: translateY(-1px); filter: brightness(1.1); }
+.btn:active { transform: translateY(0);    filter: brightness(0.95); }
+.btn-parent    { background: linear-gradient(135deg, #5b8dee, #85b0f5); color: white; box-shadow: 0 4px 16px rgba(91,141,238,0.35); }
+.btn-teacher   { background: linear-gradient(135deg, #2da87a, #52c99a); color: white; box-shadow: 0 4px 16px rgba(45,168,122,0.3); }
+.btn-principal { background: linear-gradient(135deg, #c96f3a, #e09060); color: #fff;  box-shadow: 0 4px 16px rgba(212,134,90,0.3); }
+.btn-arrow { font-size: 1rem; transition: transform 0.2s; }
+.btn:hover .btn-arrow { transform: translateX(4px); }
+
+.error {
+  background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.3);
+  color: #ff7b72; border-radius: 8px; padding: 0.6rem 0.9rem; font-size: 0.78rem;
+  margin-bottom: 1.1rem; display: flex; gap: 0.5rem; align-items: flex-start;
+  animation: shake 0.3s ease;
+}
+@keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+.card-footer { border-top: 1px solid var(--border); padding: 0.85rem 2rem; display: flex; justify-content: center; gap: 1.4rem; }
+.footer-chip { font-size: 0.65rem; color: var(--faint); letter-spacing: 0.07em; text-transform: uppercase; font-weight: 400; }
+
+/* Only the active tab's form is shown */
+.form-area { display: none; }
+.form-area.active { display: block; animation: form-reveal 0.28s cubic-bezier(0.22,1,0.36,1) both; }
+@keyframes form-reveal { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── ANDROID / MOBILE RESPONSIVE ─────────────────────────── */
+@media (max-width: 480px) {
+  body { padding: 1rem 0.75rem; align-items: flex-start; }
+  .card { border-radius: 14px; }
+  .brand { padding: 1.25rem 1.25rem 1.1rem; gap: 0.75rem; }
+  .brand-mark { width: 38px; height: 38px; border-radius: 10px; font-size: 1.1rem; }
+  .brand-name { font-size: 1.35rem; }
+  .body { padding: 1.25rem 1.25rem 1.5rem; }
+  .roles { gap: 0.4rem; }
+  .role-btn { padding: 0.7rem 0.3rem 0.6rem; border-radius: 10px; }
+  .role-icon { font-size: 1.2rem; }
+  .role-name { font-size: 0.70rem; }
+  .field input { padding: 0.85rem 0.9rem; font-size: 1rem; border-radius: 10px; }
+  .btn { padding: 0.9rem 1rem; font-size: 0.9rem; min-height: 48px; }
+  .card-footer { padding: 0.7rem 1.25rem; gap: 0.9rem; flex-wrap: wrap; justify-content: center; }
+  .footer-chip { font-size: 0.62rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+<div class="orb"   id="orb"></div>
+
+<div class="card">
+
+  <div class="brand">
+    <div class="brand-mark" id="brandMark">🎓</div>
+    <div class="brand-info">
+      <div class="brand-name">Horizons</div>
+      <div class="brand-sub">Every learner's journey, clearly mapped.</div>
+    </div>
+  </div>
+
+  <div class="body">
+
+    {# Only rendered by Django after a failed login POST — never on GET #}
+    {% if error %}
+    <div class="error" role="alert" aria-live="assertive">
+      ⚠ <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    {# Role switcher — submits a tab-switch POST (no action field = not a login attempt) #}
+    <div class="roles">
+      <div class="role-btn {% if tab == 'Parent' %}active-parent{% endif %}"
+           data-role="Parent" onclick="switchTab('Parent')">
+        <div class="role-icon">👨‍👩‍👧</div>
+        <div class="role-name">Parent</div>
+        <div class="role-dot"></div>
+      </div>
+      <div class="role-btn {% if tab == 'Teacher' %}active-teacher{% endif %}"
+           data-role="Teacher" onclick="switchTab('Teacher')">
+        <div class="role-icon">📋</div>
+        <div class="role-name">Teacher</div>
+        <div class="role-dot"></div>
+      </div>
+      <div class="role-btn {% if tab == 'Principal' %}active-principal{% endif %}"
+           data-role="Principal" onclick="switchTab('Principal')">
+        <div class="role-icon">🏛️</div>
+        <div class="role-name">Principal</div>
+        <div class="role-dot"></div>
+      </div>
+    </div>
+
+    <div class="divider">
+      <div class="div-line"></div>
+      <div class="div-label">Sign in</div>
+      <div class="div-line"></div>
+    </div>
+
+    {# ── Parent form ── #}
+    <div class="form-area {% if tab == 'Parent' %}active{% endif %}" id="form-Parent">
+      <div class="form-head">
+        <div class="form-title">Welcome back</div>
+        <div class="form-desc">Enter your credentials to view your child's profile.</div>
+      </div>
+      <form method="POST" action="{% url 'login' %}" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="tab"    value="Parent">
+        <input type="hidden" name="action" value="login">
+        <div class="field">
+          <label for="uid-parent">User ID</label>
+          <input id="uid-parent" type="text" name="user_id"
+                 placeholder="Your parent user ID"
+                 value="{% if tab == 'Parent' %}{{ submitted_user_id|default:'' }}{% endif %}"
+                 required autofocus autocomplete="username">
+        </div>
+        <div class="field">
+          <label for="pw-parent">Password</label>
+          <input id="pw-parent" type="password" name="password"
+                 placeholder="Your password"
+                 required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-parent">
+          Access Child's Profile <span class="btn-arrow">→</span>
+        </button>
+      </form>
+    </div>
+
+    {# ── Teacher form ── #}
+    <div class="form-area {% if tab == 'Teacher' %}active{% endif %}" id="form-Teacher">
+      <div class="form-head">
+        <div class="form-title">Teacher access</div>
+        <div class="form-desc">Sign in to manage your class and student records.</div>
+      </div>
+      <form method="POST" action="{% url 'login' %}" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="tab"    value="Teacher">
+        <input type="hidden" name="action" value="login">
+        <div class="field">
+          <label for="uid-teacher">User ID</label>
+          <input id="uid-teacher" type="text" name="user_id"
+                 placeholder="Your teacher user ID"
+                 value="{% if tab == 'Teacher' %}{{ submitted_user_id|default:'' }}{% endif %}"
+                 required autocomplete="username">
+        </div>
+        <div class="field">
+          <label for="pw-teacher">Password</label>
+          <input id="pw-teacher" type="password" name="password"
+                 placeholder="Your password"
+                 required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-teacher">
+          Enter Teacher View <span class="btn-arrow">→</span>
+        </button>
+      </form>
+    </div>
+
+    {# ── Principal form ── #}
+    <div class="form-area {% if tab == 'Principal' %}active{% endif %}" id="form-Principal">
+      <div class="form-head">
+        <div class="form-title">Principal access</div>
+        <div class="form-desc">School-wide overview — all classes and analytics.</div>
+      </div>
+      <form method="POST" action="{% url 'login' %}" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="tab"    value="Principal">
+        <input type="hidden" name="action" value="login">
+        <div class="field">
+          <label for="uid-principal">User ID</label>
+          <input id="uid-principal" type="text" name="user_id"
+                 placeholder="Your principal user ID"
+                 value="{% if tab == 'Principal' %}{{ submitted_user_id|default:'' }}{% endif %}"
+                 required autocomplete="username">
+        </div>
+        <div class="field">
+          <label for="pw-principal">Password</label>
+          <input id="pw-principal" type="password" name="password"
+                 placeholder="Your password"
+                 required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-principal">
+          Enter Principal View <span class="btn-arrow">→</span>
+        </button>
+      </form>
+    </div>
+
+  </div>
+
+  <div class="card-footer">
+    <span class="footer-chip">🔒 Secure</span>
+    <span class="footer-chip">🛡 Protected</span>
+    <span class="footer-chip">👨‍👩‍👧 Parent-first</span>
+  </div>
+
+</div>
+
+<script>
+// ── Stars ──────────────────────────────────────────────────────
+(function () {
+  const c = document.getElementById('stars');
+  for (let i = 0; i < 120; i++) {
+    const s = document.createElement('span');
+    const sz = Math.random() * 2 + 0.5;
+    s.style.cssText = [
+      `width:${sz}px`, `height:${sz}px`,
+      `left:${Math.random() * 100}%`, `top:${Math.random() * 100}%`,
+      `--d:${(Math.random() * 4 + 2).toFixed(1)}s`,
+      `--delay:${(Math.random() * 5).toFixed(1)}s`,
+      `--o:${(Math.random() * 0.5 + 0.1).toFixed(2)}`,
+    ].join(';');
+    c.appendChild(s);
+  }
+})();
+
+// ── Theme ──────────────────────────────────────────────────────
+const ROLE_VARS = {
+  Parent:    { color: '#5b8dee', dim: 'rgba(91,141,238,0.14)',  glow: 'rgba(91,141,238,0.28)'  },
+  Teacher:   { color: '#2da87a', dim: 'rgba(45,168,122,0.14)', glow: 'rgba(45,168,122,0.28)'  },
+  Principal: { color: '#d4865a', dim: 'rgba(212,134,90,0.14)', glow: 'rgba(212,134,90,0.28)'  },
+};
+const ORB_BG = {
+  Parent:    'radial-gradient(circle, rgba(91,141,238,0.07)  0%, transparent 70%)',
+  Teacher:   'radial-gradient(circle, rgba(45,168,122,0.07)  0%, transparent 70%)',
+  Principal: 'radial-gradient(circle, rgba(212,134,90,0.08)  0%, transparent 70%)',
+};
+const BRAND_BG = {
+  Parent:    'linear-gradient(135deg,#5b8dee,#85b0f5)',
+  Teacher:   'linear-gradient(135deg,#2da87a,#52c99a)',
+  Principal: 'linear-gradient(135deg,#c96f3a,#e09060)',
+};
+
+// Read server-rendered active tab so theme matches on load
+const initialTab = document.querySelector('.role-btn.active-parent')  ? 'Parent'
+                 : document.querySelector('.role-btn.active-teacher') ? 'Teacher'
+                 : 'Principal';
+
+function applyRoleTheme(role) {
+  const v = ROLE_VARS[role]; if (!v) return;
+  const r = document.documentElement;
+  r.style.setProperty('--active-color', v.color);
+  r.style.setProperty('--active-dim',   v.dim);
+  r.style.setProperty('--active-glow',  v.glow);
+  document.getElementById('orb').style.background       = ORB_BG[role];
+  document.getElementById('brandMark').style.background = BRAND_BG[role];
+}
+
+// Tab switching — POSTs to Django WITHOUT action="login" so view treats it
+// as a plain tab-switch and never shows an error
+function switchTab(role) {
+  const csrf = (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || '';
+  if (!csrf) { window.location.href = '?tab=' + role; return; }
+  const f = document.createElement('form');
+  f.method = 'POST'; f.action = '{% url "login" %}'; f.style.display = 'none';
+  [['csrfmiddlewaretoken', csrf], ['tab', role]].forEach(([n, v]) => {
+    const i = document.createElement('input');
+    i.type = 'hidden'; i.name = n; i.value = v; f.appendChild(i);
+  });
+  document.body.appendChild(f); f.submit();
+}
+
+// ── Orb hover ──────────────────────────────────────────────────
+document.querySelectorAll('.role-btn').forEach(btn => {
+  btn.addEventListener('mouseenter', () => {
+    document.getElementById('orb').style.background = ORB_BG[btn.dataset.role];
+  });
+  btn.addEventListener('mouseleave', () => {
+    document.getElementById('orb').style.background = ORB_BG[initialTab];
+  });
+});
+
+applyRoleTheme(initialTab);
+</script>
+</body>
+</html>

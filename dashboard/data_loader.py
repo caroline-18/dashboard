@@ -5,6 +5,16 @@
 #  All reads go through this module only.
 # ============================================================
 
+import threading
+_thread_locals = threading.local()
+
+def set_active_school_db(alias: str):
+    """Called at login to set the school DB for this thread/request."""
+    _thread_locals.school_db_alias = alias
+
+def get_active_school_db() -> str:
+    return getattr(_thread_locals, "school_db_alias", None)
+
 import logging
 import warnings
 from functools import wraps
@@ -28,28 +38,53 @@ logging.basicConfig(
 )
 log = logging.getLogger("data_loader")
 
+def _get_school_db_names() -> tuple[str, str]:
+    alias = get_active_school_db() or "arnolds_db"
+    db_cfg = settings.DATABASES.get(alias, {})
+    analytics_db = db_cfg.get("NAME", "arnolds1_analytics")
+    # Read source DB from settings instead of guessing by stripping "_analytics"
+    source_db = db_cfg.get("SOURCE_DB", analytics_db.replace("_analytics", ""))
+    return source_db, analytics_db
 
 # ============================================================
 #  DB CONFIG  —  reads from Django settings.py
 # ============================================================
 
-def _get_db_config() -> dict:
-    db = settings.DATABASES["analytics"]
-    return {
-        "host":     db["HOST"],
-        "user":     db["USER"],
-        "password": db["PASSWORD"],
-        "database": db["NAME"],
-        "port":     int(db.get("PORT", 3306)),
-    }
+# def _get_db_config() -> dict:
+#     db = settings.DATABASES["arnolds_db"]
+#     return {
+#         "host":     db["HOST"],
+#         "user":     db["USER"],
+#         "password": db["PASSWORD"],
+#         "database": db["NAME"],
+#         "port":     int(db.get("PORT", 3306)),
+#     }
 
 
 # ============================================================
 #  CONNECTION + QUERY HELPER
 # ============================================================
 
-def _get_connection() -> mysql.connector.MySQLConnection:
-    return mysql.connector.connect(**_get_db_config())
+def _get_connection():
+    from django.conf import settings
+
+    alias = get_active_school_db()
+    if not alias:
+        # fallback to first school DB for backward-compat during dev
+        alias = "arnolds_db"
+
+    db_cfg = settings.DATABASES.get(alias)
+    if not db_cfg:
+        raise RuntimeError(f"No DB config found for alias '{alias}'")
+
+    return mysql.connector.connect(
+        host=db_cfg["HOST"],
+        port=int(db_cfg.get("PORT", 3306)),
+        user=db_cfg["USER"],
+        password=db_cfg["PASSWORD"],
+        database=db_cfg["NAME"],
+        charset="utf8mb4",
+    )
 
 
 def _read_sql(query: str, params=None) -> pd.DataFrame:
@@ -665,7 +700,9 @@ def _load_exam_breakdown_raw(student_id: int, academic_yr: str) -> pd.DataFrame:
     if not validate_year(academic_yr):
         raise ValueError(f"Invalid academic_yr: {academic_yr}")
 
-    df = _read_sql("""
+    source_db, analytics_db = _get_school_db_names()   # ← dynamic
+
+    df = _read_sql(f"""
         SELECT
             mh.name                         AS exam_type,
             e.exam_id                       AS exam_id,
@@ -682,21 +719,21 @@ def _load_exam_breakdown_raw(student_id: int, academic_yr: str) -> pd.DataFrame:
             END                             AS subject_name,
             SUM(smc.marks_obtained)         AS marks_obtained,
             SUM(smc.max_marks)              AS max_marks
-        FROM arnolds1.student_marks_components smc
-        JOIN arnolds1.marks_headings mh
+        FROM `{source_db}`.student_marks_components smc
+        JOIN `{source_db}`.marks_headings mh
             ON mh.marks_headings_id = smc.marks_headings_id
-        JOIN arnolds1.exam e
+        JOIN `{source_db}`.exam e
             ON  e.exam_id     = smc.exam_id
             AND e.academic_yr = smc.academic_yr
-        JOIN arnolds1.student st
+        JOIN `{source_db}`.student st
             ON  st.student_id  = smc.student_id
             AND st.academic_yr = smc.academic_yr
-        JOIN arnolds1.class c
+        JOIN `{source_db}`.class c
             ON  c.class_id    = st.class_id
             AND c.academic_yr = st.academic_yr
-        JOIN arnolds1.subject_master sm2
+        JOIN `{source_db}`.subject_master sm2
             ON sm2.sm_id = smc.subject_id
-        JOIN arnolds1_analytics.dim_subject ds
+        JOIN `{analytics_db}`.dim_subject ds
             ON ds.subject_id = CASE
                 WHEN c.name IN ('6','7','8','9','10') AND smc.subject_id IN (15,16,17) THEN 24
                 ELSE smc.subject_id
@@ -712,10 +749,8 @@ def _load_exam_breakdown_raw(student_id: int, academic_yr: str) -> pd.DataFrame:
     log.info("load_exam_breakdown: student_id=%d year=%s → %d rows", student_id, academic_yr, len(df))
     return df
 
-
 def load_exam_breakdown(student_id: int, academic_yr: str) -> pd.DataFrame:
     return _cached(f"exam_breakdown_{student_id}_{academic_yr}", _load_exam_breakdown_raw, student_id, academic_yr)
-
 
 @_safe_load
 def _load_available_years_raw() -> list:

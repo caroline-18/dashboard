@@ -18,6 +18,7 @@ def _cache_key(student: dict) -> str:
         str(student.get("oral_avg", "")),
         str(student.get("strong_subjects", "")),
         str(student.get("strong_subjects_ai", "")),
+        str(student.get("achievement_list", "")),
     )
     return hashlib.md5("|".join(fields).encode()).hexdigest()
 
@@ -168,6 +169,82 @@ SUBJECT_CAREER_MAP = {
     ],
 }
 
+# ==================================================
+# ACHIEVEMENT → SKILL MAP
+# ==================================================
+
+ACHIEVEMENT_SKILL_MAP = {
+    "football": ["athletic discipline", "teamwork"],
+    "cricket": ["athletic discipline", "teamwork"],
+    "sports": ["athletic discipline"],
+
+    "music": ["creativity", "performance confidence"],
+    "dance": ["creativity", "performance confidence"],
+    "art": ["creativity", "visual thinking"],
+    "drawing": ["creativity", "visual thinking"],
+
+    "debate": ["communication", "argumentation", "leadership"],
+    "speech": ["communication"],
+    "public speaking": ["communication"],
+
+    "olympiad": ["analytical ability", "problem solving"],
+    "science fair": ["analytical ability", "scientific curiosity"],
+    "coding": ["logical thinking", "problem solving"],
+    "robotics": ["engineering mindset", "problem solving"],
+
+    "volunteer": ["empathy", "social responsibility"],
+}
+
+# ==================================================
+# SKILL → CAREER MAP
+# ==================================================
+
+SKILL_CAREER_MAP = {
+    "analytical ability": [
+        ("Engineering", "Analytical thinking supports engineering problem solving"),
+        ("Data Science", "Analytical ability aligns with statistical reasoning"),
+    ],
+
+    "problem solving": [
+        ("Software Engineering", "Problem solving is central to software design"),
+        ("Artificial Intelligence", "AI research relies on strong problem solving"),
+    ],
+
+    "communication": [
+        ("Law", "Strong communication is essential for legal careers"),
+        ("Journalism", "Communication skills support journalism and media"),
+    ],
+
+    "leadership": [
+        ("Business Management", "Leadership supports management roles"),
+        ("Civil Services", "Leadership aligns with administrative careers"),
+    ],
+
+    "creativity": [
+        ("Graphic Design", "Creativity directly supports visual design careers"),
+        ("Architecture", "Creative spatial thinking supports architecture"),
+    ],
+
+    "visual thinking": [
+        ("Architecture", "Visual thinking is essential for architectural design"),
+        ("Animation & Game Design", "Visual imagination supports animation careers"),
+    ],
+
+    "athletic discipline": [
+        ("Professional Sports", "Athletic discipline supports sports careers"),
+        ("Sports Coaching", "Sports experience supports coaching pathways"),
+    ],
+
+    "teamwork": [
+        ("Business Management", "Team collaboration skills support management"),
+    ],
+
+    "scientific curiosity": [
+        ("Scientific Research", "Curiosity drives research careers"),
+        ("Biotechnology", "Scientific curiosity aligns with biotech fields"),
+    ],
+}
+
 def _get_career_options_from_subjects(subjects_list: list) -> list:
     """
     Given a list of subject strings, return a deduplicated list of
@@ -189,6 +266,34 @@ def _get_career_options_from_subjects(subjects_list: list) -> list:
 
     return results
 
+
+# ==================================================
+# ACHIEVEMENT → CAREER OPTIONS
+# ==================================================
+
+def _get_career_options_from_achievements(achievement_text: str):
+
+    if not achievement_text:
+        return []
+
+    achievement_text = achievement_text.lower()
+
+    skills = set()
+
+    for keyword, skill_list in ACHIEVEMENT_SKILL_MAP.items():
+        if keyword in achievement_text:
+            skills.update(skill_list)
+
+    results = []
+    seen = set()
+
+    for skill in skills:
+        for career_field, reason in SKILL_CAREER_MAP.get(skill, []):
+            if career_field not in seen:
+                seen.add(career_field)
+                results.append((career_field, reason, skill))
+
+    return results
 
 # ==================================================
 # HELPERS
@@ -306,6 +411,7 @@ def _build_prompt(student, history_df=None):
     internal_avg    = _clean(student.get("oral_avg"))
     strong_subjects = _clean(student.get("strong_subjects"))
     subjects_ai     = _clean(student.get("strong_subjects_ai"), strong_subjects)
+    achievements = _clean(student.get("achievement_list"))
     class_name      = _clean(student.get("class_name"), "")
 
     class_match = re.search(r"(\d+)", str(class_name))
@@ -347,7 +453,11 @@ def _build_prompt(student, history_df=None):
 
     # === KEY FIX: Pre-compute grounded career options from SUBJECT_CAREER_MAP ===
     all_subjects = core + supporting
-    career_options = _get_career_options_from_subjects(all_subjects)
+
+    subject_careers = _get_career_options_from_subjects(all_subjects)
+    achievement_careers = _get_career_options_from_achievements(achievements)
+
+    career_options = subject_careers + achievement_careers
 
     # Limit to top 4 most relevant (first matched = highest priority subjects first)
     career_options = career_options[:4]
@@ -369,6 +479,7 @@ def _build_prompt(student, history_df=None):
         f"Oral/internal average: {internal_avg or 'not available'}%",
         f"Core subjects: {', '.join(core) if core else 'not identified'}",
         f"Supporting subjects: {', '.join(supporting) if supporting else 'none'}",
+        f"Achievements: {achievements or 'none recorded'}",
         f"Communication style: {comm_style}",
     ]
     if sci_note:

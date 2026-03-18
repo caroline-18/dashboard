@@ -2132,11 +2132,9 @@ def _lookup_teacher(teacher_id: int):
 # ============================================================
 
 def login_view(request):
-    # Already logged in — skip to dashboard
     if request.session.get("role"):
         return redirect("student_view")
 
-    # Resolve active tab — GET param > POST param > session > default Parent
     raw_tab = (
         request.GET.get("tab")
         or request.POST.get("tab")
@@ -2146,7 +2144,6 @@ def login_view(request):
     tab = raw_tab if raw_tab in _VALID_TABS else "Parent"
     request.session["login_tab"] = tab
 
-    # ── GET or tab-switch POST (no action="login") — never show error ──
     is_login_attempt = (
         request.method == "POST"
         and request.POST.get("action") == "login"
@@ -2154,7 +2151,6 @@ def login_view(request):
     if not is_login_attempt:
         return render(request, "login.html", {"tab": tab})
 
-    # ── Login attempt ─────────────────────────────────────────────
     user_id  = request.POST.get("user_id",  "").strip()
     password = request.POST.get("password", "").strip()
     error    = None
@@ -2162,77 +2158,101 @@ def login_view(request):
     if not user_id or not password:
         error = "Please enter your User ID and password."
     else:
-        user = authenticate_user(user_id, password)
-        print(f"DEBUG: user_id={user_id}, tab={tab}, user={user}, action={request.POST.get('action')}")
+        # ── STEP 1: Find school from master DB ───────────────────
+        from dashboard.school_registry import get_school_for_user, get_or_register_school_db
+        from dashboard.data_loader import set_active_school_db
 
-        if user is None:
-            error = "Invalid credentials. Please try again."
+        school_id, role_table = get_school_for_user(user_id)
 
-        elif tab == "Parent" and user["role_id"] != ROLE_PARENT:
-            error = "This account is not registered as a Parent."
+        if school_id is None:
+            error = "Your account is not linked to any school. Contact admin."
+        else:
+            try:
+                school_db_alias = get_or_register_school_db(school_id)
+            except ValueError as e:
+                school_db_alias = None
+                error = f"School database not configured: {e}"
 
-        elif tab == "Teacher" and user["role_id"] != ROLE_TEACHER:
-            error = "This account is not registered as a Teacher."
+        if not error:
+            # ── STEP 2: Activate school DB for this thread ───────
+            set_active_school_db(school_db_alias)
 
-        elif tab == "Principal" and user["role_id"] != ROLE_PRINCIPAL:
-            error = "This account is not registered as a Principal."
+            # ── STEP 3: Authenticate against that school's DB ────
+            user = authenticate_user(user_id, password)
+            print(f"DEBUG: user_id={user_id}, tab={tab}, school_id={school_id}, "
+                  f"alias={school_db_alias}, user={user}")
 
-        elif tab == "Parent":
-            request.session.flush()
-            request.session["role"]      = "parent"
-            request.session["parent_id"] = user["reg_id"]
-            request.session["user_id"]   = user["user_id"]
-            request.session["name"]      = user["name"]
-            return redirect("student_view")
+            if user is None:
+                error = "Invalid credentials. Please try again."
 
-        elif tab == "Teacher":
-            record = _lookup_teacher(user["reg_id"])
-            if record is None:
-                error = "Teacher record not found. Contact admin."
-            elif record["is_principal"]:
-                error = "This account has Principal access. Please use the Principal tab."
-            else:
+            elif tab == "Parent" and user["role_id"] != ROLE_PARENT:
+                error = "This account is not registered as a Parent."
+
+            elif tab == "Teacher" and user["role_id"] != ROLE_TEACHER:
+                error = "This account is not registered as a Teacher."
+
+            elif tab == "Principal" and user["role_id"] != ROLE_PRINCIPAL:
+                error = "This account is not registered as a Principal."
+
+            elif tab == "Parent":
                 request.session.flush()
                 request.session.update({
-                    "role":             "admin",
-                    "admin_type":       "teacher",
-                    "user_id":          user["user_id"],
-                    "name":             user["name"],
-                    "teacher_id":       user["reg_id"],
-                    "teacher_name":     record["name"],
-                    "teacher_desig":    record["designation"],
-                    "teacher_class_id": record["class_id"],
-                    "teacher_sec_id":   record["section_id"],
-                    "parent_id":        None,
+                    "role":            "parent",
+                    "parent_id":       user["reg_id"],
+                    "user_id":         user["user_id"],
+                    "name":            user["name"],
+                    "school_id":       school_id,
+                    "school_db_alias": school_db_alias,
                 })
+                set_active_school_db(school_db_alias)
                 return redirect("student_view")
 
-        elif tab == "Principal":
-            record = _lookup_teacher(user["reg_id"])
-            if record is None:
-                error = "Principal record not found. Contact admin."
-            elif not record["is_principal"]:
-                error = "This ID does not have Principal / Vice-Principal access."
-            else:
+            elif tab == "Teacher":
+                record = _lookup_teacher(user["reg_id"])
+                if record is None:
+                    error = "Teacher record not found. Contact admin."
+                elif record["is_principal"]:
+                    error = "This account has Principal access. Please use the Principal tab."
+                else:
+                    request.session.flush()
+                    request.session.update({
+                        "role":             "admin",
+                        "admin_type":       "teacher",
+                        "user_id":          user["user_id"],
+                        "name":             user["name"],
+                        "teacher_id":       user["reg_id"],
+                        "teacher_name":     record["name"],
+                        "teacher_desig":    record["designation"],
+                        "teacher_class_id": record["class_id"],
+                        "teacher_sec_id":   record["section_id"],
+                        "parent_id":        None,
+                        "school_id":        school_id,
+                        "school_db_alias":  school_db_alias,
+                    })
+                    set_active_school_db(school_db_alias)
+                    return redirect("student_view")
+
+            elif tab == "Principal":
                 request.session.flush()
                 request.session.update({
-                    "role":          "admin",
-                    "admin_type":    "principal",
-                    "user_id":       user["user_id"],
-                    "name":          user["name"],
-                    "teacher_id":    user["reg_id"],
-                    "teacher_name":  record["name"],
-                    "teacher_desig": record["designation"],
-                    "parent_id":     None,
+                    "role":            "admin",
+                    "admin_type":      "principal",
+                    "user_id":         user["user_id"],
+                    "name":            user["name"],
+                    "teacher_id":      user["reg_id"],
+                    "teacher_name":    user["name"],
+                    "teacher_desig":   "Principal",
+                    "parent_id":       None,
+                    "school_id":       school_id,
+                    "school_db_alias": school_db_alias,
                 })
+                # Enrich with actual name/designation from dim_teachers if available
+                record = _lookup_teacher(user["reg_id"])
+                if record:
+                    request.session["teacher_name"]  = record["name"]
+                    request.session["teacher_desig"] = record["designation"]
+                set_active_school_db(school_db_alias)
                 return redirect("student_view")
-
-    # Render with error — only reachable after a failed login attempt
-    return render(request, "login.html", {
-        "tab":               tab,
-        "error":             error,
-        "submitted_user_id": user_id,
-    })
 
 
 # ============================================================

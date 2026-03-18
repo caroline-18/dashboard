@@ -15,12 +15,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'dashboard',   # ← ADD THIS
+    'dashboard',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'dashboard.middleware.SchoolDBMiddleware',        # ← RIGHT after SessionMiddleware
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -33,7 +34,7 @@ ROOT_URLCONF = 'aceventura_ai.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'dashboard' / 'templates'],  # ← ADD THIS
+        'DIRS': [BASE_DIR / 'dashboard' / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -47,23 +48,52 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'aceventura_ai.wsgi.application'
 
-# Default DB (Django auth/sessions)
+MASTER_DB_CONFIG = {
+    'ENGINE':   'django.db.backends.mysql',
+    'NAME':     'u333015459_EvolvuUsrsTest',
+    'USER':     'root',
+    'PASSWORD': 'Kevin@1702',
+    'HOST':     'localhost',
+    'PORT':     '3306',
+    'OPTIONS':  {'charset': 'utf8mb4'},
+}
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     },
-    # Analytics MySQL DB (read-only, used by data_loader.py)
-    'analytics': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'arnolds1_analytics',
-        'USER': 'root',       # ← CHANGE THIS
-        'PASSWORD': 'Kevin@1702', # ← CHANGE THIS
-        'HOST': 'localhost',
-        'PORT': '3306',
-        'OPTIONS': {'charset': 'utf8mb4'},
+    # School DBs are registered dynamically at login time via
+    # dashboard.school_registry.register_school_db()
+    # Hard-code known schools here as fallback / dev convenience:
+    'arnolds_db': {
+        'ENGINE':   'django.db.backends.mysql',
+        'NAME':     'arnolds1_analytics',
+        "SOURCE_DB": "arnolds_live",
+        'USER':     'root',
+        'PASSWORD': 'Kevin@1702',
+        'HOST':     'localhost',
+        'PORT':     '3306',
+        'OPTIONS':  {'charset': 'utf8mb4'},
+    },
+    'hscs_db': {
+        'ENGINE':   'django.db.backends.mysql',
+        'NAME':     'hscs1_analytics',
+        'USER':     'root',
+        'PASSWORD': 'Kevin@1702',
+        'HOST':     'localhost',
+        'PORT':     '3306',
+        'OPTIONS':  {'charset': 'utf8mb4'},
     },
 }
+
+SCHOOL_DB_ALIAS_MAP = {
+    1: 'arnolds_db',
+    7: 'hscs_db',
+    # Add more as you onboard schools
+}
+
+DATABASE_ROUTERS = ['dashboard.db_router.SchoolDatabaseRouter']
 
 CACHES = {
     'default': {
@@ -80,16 +110,15 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'Asia/Manila'   # ← Philippines timezone
+TIME_ZONE = 'Asia/Manila'
 USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
-# Auth routing
-LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/student/'
+LOGIN_URL           = '/login/'
+LOGIN_REDIRECT_URL  = '/student/'
 LOGOUT_REDIRECT_URL = '/login/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

@@ -1345,7 +1345,7 @@ function buildOverview() {
   const oD = o !== null ? o.toFixed(1)+'%' : 'N/A';
   const aD = a !== null ? a.toFixed(1)+'%' : 'N/A';
   const oSub = o !== null ? (o >= 75 ? 'Doing great! 🌟' : 'Needs a little support') : 'No data yet';
-  const aSub = a !== null ? (a >= 90 ? 'Excellent — rarely absent!' : 'Attending regularly') : 'No data yet';
+  const aSub = a !== null ? (a >= 90 ? 'Excellent — rarely absent!' : a >= 75 ? 'Attending regularly' : a >= 50 ? 'Needs improvement' : 'Irregular attendance') : 'No data yet';
   const achSub = DATA.achievements > 0 ? 'Collecting awards!' : 'Just getting started';
   const hwSub  = DATA.hwCount > 0 ? 'Completing homework ✓' : 'Homework needs attention';
   function tip(t) { return `<span class="tooltip-wrap"><span class="metric-tooltip">ℹ️</span><span class="tooltip-text">${t}</span></span>`; }

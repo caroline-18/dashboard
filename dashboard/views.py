@@ -684,6 +684,14 @@ def student_view(request):
             if "parent_id" in df_all.columns else df_all.copy()
     else:
         df = df_all.copy()
+        # ── TEACHER FILTER: restrict to assigned class/section only ──
+        if is_teacher:
+            teacher_class_id = request.session.get("teacher_class_id")
+            teacher_sec_id   = request.session.get("teacher_sec_id")
+            if teacher_class_id and "class_id" in df.columns:
+                df = df[df["class_id"].astype(str) == str(teacher_class_id)]
+            if teacher_sec_id and "section_id" in df.columns:
+                df = df[df["section_id"].astype(str) == str(teacher_sec_id)]
 
     if df.empty:
         return render(request, "student_view.html", {"error": "no_student"})
@@ -1061,6 +1069,12 @@ def class_view(request):
 
     all_years   = sorted(df_all["academic_yr"].dropna().unique().tolist(), reverse=True)
     all_classes = sort_classes(df_all["class_name"].dropna().unique().tolist())
+    # ── TEACHER FILTER: restrict to assigned class/section only ──
+    if is_teacher:
+        teacher_class_id = request.session.get("teacher_class_id")
+        if teacher_class_id and "class_id" in df_all.columns:
+            df_all = df_all[df_all["class_id"].astype(str) == str(teacher_class_id)]
+            all_classes = sort_classes(df_all["class_name"].dropna().unique().tolist())
 
     selected_year     = request.GET.get("year",       all_years[0]   if all_years   else "")
     selected_class    = request.GET.get("class_name", all_classes[0] if all_classes else "")
@@ -2253,6 +2267,7 @@ def login_view(request):
                     request.session["teacher_desig"] = record["designation"]
                 set_active_school_db(school_db_alias)
                 return redirect("student_view")
+    return render(request, "login.html", {"tab": tab, "error": error})
 
 
 # ============================================================

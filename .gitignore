@@ -5,4 +5,8 @@ __pycache__/
 .env
 venv/
 staticfiles/
-.DS_Store
+.DS_Store.env
+*.sql
+nohup.out
+arnolds_analytics_dump.sql
+arnolds_schema.sql

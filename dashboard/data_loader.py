@@ -416,10 +416,18 @@ def authenticate_user(user_id: str, password: str) -> Optional[dict]:
 
     row = df.iloc[0]
 
-    # Plain-text comparison — matches ETL source (arnolds1.user_master.password)
-    if str(row["password"]) != str(password):
-        log.info("authenticate_user: wrong password for user_id='%s'", user_id)
-        return None
+    # Bcrypt comparison
+    import bcrypt as _bcrypt
+    stored_pw = str(row["password"]).encode("utf-8")
+    entered_pw = str(password).encode("utf-8")
+    try:
+        if not _bcrypt.checkpw(entered_pw, stored_pw):
+            log.info("authenticate_user: wrong password for user_id='%s'", user_id)
+            return None
+    except Exception:
+        if stored_pw != entered_pw:
+            log.info("authenticate_user: wrong password for user_id='%s'", user_id)
+            return None
 
     role_id = str(row["role_id"]).strip().upper()
     if role_id not in _VALID_ROLES:

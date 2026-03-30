@@ -32,10 +32,6 @@
 USE arnolds_db;
 
 
-/* ============================================================
-   STEP 0: DEFINE TARGET YEAR RANGE
-   ============================================================ */
-
 DROP TEMPORARY TABLE IF EXISTS new_years;
 
 CREATE TEMPORARY TABLE new_years AS
@@ -138,9 +134,9 @@ INSERT INTO fact_attendance
 SELECT
   ac.student_id, ac.academic_yr,
   COUNT(*)                                                     AS total_school_days,
-  COUNT(*) - SUM(ac.attendance_status = 'P')                  AS absent_days,
-  SUM(ac.attendance_status = 'P')                             AS present_days,
-  ROUND(SUM(ac.attendance_status = 'P') / COUNT(*) * 100, 2) AS attendance_percentage
+  SUM(ac.attendance_status = 'A')                              AS absent_days,
+  COUNT(*) - SUM(ac.attendance_status = 'A')                   AS present_days,
+  ROUND((COUNT(*) - SUM(ac.attendance_status = 'A')) / COUNT(*) * 100, 2) AS attendance_percentage
 FROM attendance_clean ac
 WHERE ac.academic_yr IN (SELECT academic_yr FROM new_years)
   AND NOT EXISTS (

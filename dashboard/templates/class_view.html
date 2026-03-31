@@ -701,14 +701,7 @@
             {% endfor %}
           </select>
         </div>
-        <div>
-          <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px;font-family:var(--font-head);">📊 View</label>
-          <div class="chart-type-btns">
-            <button class="ct-btn active" onclick="setChartType('dist',this)">Distribution</button>
-            <button class="ct-btn" onclick="setChartType('rank',this)">Rankings</button>
-            <button class="ct-btn" onclick="setChartType('wo',this)">Written vs Oral</button>
-          </div>
-        </div>
+
       </div>
       <div id="subjectNoMarks" class="warn-box" style="display:none;">
         ⚠️ <strong>No marks entered yet</strong> for this subject.
@@ -720,9 +713,20 @@
           <div class="subj-kpi"><div class="sk-label">Lowest Score</div><div class="sk-value" style="color:var(--red);" id="subjLow">—</div></div>
           <div class="subj-kpi"><div class="sk-label">Passed (60%+)</div><div class="sk-value" style="color:var(--purple);" id="subjPassed">—</div></div>
         </div>
-        <!-- Subject chart — height set dynamically by JS -->
-        <div class="chart-box" id="subjectChartBox" style="height:220px;">
-          <canvas id="chartSubject"></canvas>
+        <!-- Subject rankings table -->
+        <div id="subjectChartBox" style="margin-top:14px;">
+          <table id="subjectRankTable" style="width:100%;border-collapse:collapse;font-family:var(--font-head);font-size:13px;">
+            <thead>
+              <tr style="border-bottom:2px solid var(--glass-b);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;">
+                <th style="padding:8px 6px;text-align:left;">Rank</th>
+                <th style="padding:8px 6px;text-align:left;">Student</th>
+                <th style="padding:8px 6px;text-align:right;">Overall</th>
+                <th style="padding:8px 6px;text-align:right;">Written</th>
+                <th style="padding:8px 6px;text-align:right;">Oral</th>
+              </tr>
+            </thead>
+            <tbody id="subjectRankBody"></tbody>
+          </table>
         </div>
       </div>
     {% else %}
@@ -877,11 +881,7 @@ function switchTab(e, tabId) {
 }
 
 // ── 6. Subject chart ────────────────────────────────────────────
-let currentChartType = 'dist';
-let subjectChart     = null;
-
 function setChartType(type, btn) {
-  currentChartType = type;
   document.querySelectorAll('.ct-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   loadSubjectChart();
@@ -910,92 +910,30 @@ function loadSubjectChart() {
   document.getElementById('subjPassed').textContent = avgs.filter(v => v >= 60).length + '/' + avgs.length;
 
   // Destroy previous chart instance
-  if (subjectChart) { subjectChart.destroy(); subjectChart = null; }
-
   // Re-insert canvas (clean slate) and set box height
   const box = document.getElementById('subjectChartBox');
 
-  if (currentChartType === 'rank') {
-    // Taller for many students; each row ~24px
-    box.style.height = Math.max(220, rows.length * 24) + 'px';
-  } else {
-    box.style.height = '220px';
-  }
-
-  // Ensure canvas is present (may have been replaced by empty-state text)
-  if (!document.getElementById('chartSubject')) {
-    box.innerHTML = '<canvas id="chartSubject"></canvas>';
-  }
-  const canvas = document.getElementById('chartSubject');
-  const ctx    = canvas.getContext('2d');
-
-  if (currentChartType === 'dist') {
-    const binLabels = ['0–10','10–20','20–30','30–40','40–50','50–60','60–70','70–80','80–90','90–100'];
-    const bins = new Array(10).fill(0);
-    avgs.forEach(v => { bins[Math.min(Math.floor(v / 10), 9)]++; });
-    const colors = binLabels.map(l => {
-      const s = parseInt(l);
-      return s >= 70 ? '#00c9a7' : s >= 40 ? '#5b9aff' : '#f87171';
-    });
-    subjectChart = new Chart(ctx, {
-      type: 'bar',
-      data: { labels: binLabels, datasets: [{ data: bins, backgroundColor: colors, borderRadius: 7, borderSkipped: false }] },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: noGridStyle, ticks: { maxRotation: 30, font: tickFont } },
-          y: { grid: gridStyle, ticks: { stepSize: 1, font: tickFont }, title: { display: true, text: 'Students', font: titleFont } }
-        }
-      }
-    });
-
-  } else if (currentChartType === 'rank') {
-    const sorted = [...rows].sort((a,b) => b.subject_avg - a.subject_avg);
-    const colors = sorted.map(r => r.subject_avg >= 70 ? '#00c9a7' : r.subject_avg >= 40 ? '#5b9aff' : '#f87171');
-    subjectChart = new Chart(ctx, {
-      type: 'bar',
-      data: { labels: sorted.map(r => r.student_name), datasets: [{ data: sorted.map(r => r.subject_avg), backgroundColor: colors, borderRadius: 6, borderSkipped: false }] },
-      options: {
-        indexAxis: 'y',
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: t => ' ' + t.raw.toFixed(1) + '%' } } },
-        scales: {
-          x: { min: 0, max: 100, grid: gridStyle, ticks: tickFont, title: { display: true, text: 'Score %', font: titleFont } },
-          y: { grid: noGridStyle, ticks: { font: { size: 10 } } }
-        }
-      }
-    });
-
-  } else if (currentChartType === 'wo') {
-    const woRows = rows.filter(r => r.written_avg != null && r.oral_avg != null);
-    if (!woRows.length) {
-      box.innerHTML = '<div class="empty-state">No written vs oral breakdown available for this subject.</div>';
-      return;
-    }
-    const sorted = [...woRows].sort((a,b) => b.subject_avg - a.subject_avg);
-    subjectChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: sorted.map(r => r.student_name),
-        datasets: [
-          { label: 'Written', data: sorted.map(r => r.written_avg), backgroundColor: '#5b9affcc', borderRadius: 5 },
-          { label: 'Oral',    data: sorted.map(r => r.oral_avg),    backgroundColor: '#b794f6cc', borderRadius: 5 },
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'top', labels: { font: { size: 12, weight: '600' }, padding: 16, usePointStyle: true } },
-          tooltip: { callbacks: { label: t => ` ${t.dataset.label}: ${t.raw.toFixed(1)}%` } }
-        },
-        scales: {
-          x: { grid: noGridStyle, ticks: { maxRotation: 40, font: tickFont } },
-          y: { min: 0, max: 100, grid: gridStyle, ticks: tickFont, title: { display: true, text: 'Score %', font: titleFont } }
-        }
-      }
-    });
-  }
+  // Populate rankings table
+  const sorted = [...rows].sort((a,b) => b.subject_avg - a.subject_avg);
+  const tbody = document.getElementById('subjectRankBody');
+  tbody.innerHTML = '';
+  sorted.forEach((r, i) => {
+    const rank = i + 1;
+    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+    const overall = r.subject_avg != null ? r.subject_avg.toFixed(1) + '%' : '—';
+    const written = r.written_avg != null ? r.written_avg.toFixed(1) + '%' : '—';
+    const oral    = r.oral_avg    != null ? r.oral_avg.toFixed(1)    + '%' : '—';
+    const color   = r.subject_avg >= 70 ? '#00c9a7' : r.subject_avg >= 40 ? '#5b9aff' : '#f87171';
+    const bg      = i % 2 === 0 ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)';
+    tbody.innerHTML += `
+      <tr style="background:${bg};border-bottom:1px solid var(--glass-b);">
+        <td style="padding:8px 6px;font-weight:800;font-size:14px;width:40px;">${medal}</td>
+        <td style="padding:8px 6px;font-weight:600;">${r.student_name}</td>
+        <td style="padding:8px 6px;text-align:right;font-weight:800;color:${color};">${overall}</td>
+        <td style="padding:8px 6px;text-align:right;color:#5b9aff;">${written}</td>
+        <td style="padding:8px 6px;text-align:right;color:#b794f6;">${oral}</td>
+      </tr>`;
+  });
 }
 
 document.addEventListener('DOMContentLoaded', () => {

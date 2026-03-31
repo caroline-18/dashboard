@@ -1658,7 +1658,8 @@ def _generate_career_analysis(career_goal, class_name, overall_pct,
     goal_is_supported = goal_match is not None
 
     try:
-        import google.generativeai as genai
+        from google import genai as genai_new
+        from google.genai import types as genai_types
         import os
 
         if grounded_careers:
@@ -1745,8 +1746,13 @@ def _generate_career_analysis(career_goal, class_name, overall_pct,
             "\n\nUnder 220 words. Plain text only. No markdown. No bold. No extra sections."
         )
 
-        genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
-        return genai.GenerativeModel("gemini-1.5-flash").generate_content(prompt).text.strip()
+        _client = genai_new.Client(api_key=os.environ["GOOGLE_API_KEY"])
+        response = _client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=genai_types.GenerateContentConfig(max_output_tokens=300)
+        )
+        return response.text.strip()
 
     except Exception:
         pass

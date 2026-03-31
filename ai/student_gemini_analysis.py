@@ -2,7 +2,8 @@ import os
 import re
 import math
 import hashlib
-from groq import Groq
+from google import genai
+from google.genai import types
 
 # ==================================================
 # CACHE  — avoids re-calling API for same student data
@@ -25,8 +26,8 @@ def _cache_key(student: dict) -> str:
 # ==================================================
 # CONFIG
 # ==================================================
-_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-_MODEL  = "llama-3.3-70b-versatile"
+_GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
+_MODEL  = "gemini-2.5-flash"
 
 
 # ==================================================
@@ -550,23 +551,18 @@ def generate_dashboard_insight(current_student, history_df=None):
                 "a personalized learning profile will appear here."
             )
 
-        response = _client.chat.completions.create(
+        client = genai.Client(api_key=_GOOGLE_API_KEY)
+        response = client.models.generate_content(
             model=_MODEL,
-            max_tokens=400,
-            temperature=0.2,
-            seed=42,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user",   "content": user_prompt},
-            ],
+            contents=user_prompt,
+            config=types.GenerateContentConfig(system_instruction=system_prompt, max_output_tokens=400)
         )
-
-        result = response.choices[0].message.content.strip()
+        result = response.text.strip()
         _cache[key] = result
         return result
 
     except Exception as e:
-        print(f"[ERROR] Groq API error: {e}")
+        print(f"[ERROR] Gemini API error: {e}")
         import traceback
         traceback.print_exc()
 
@@ -615,30 +611,16 @@ def generate_class_ai_summary(class_df):
         if avg_att:
             context_parts.append(f"average attendance: {avg_att}%")
 
-        response = _client.chat.completions.create(
+        client = genai.Client(api_key=_GOOGLE_API_KEY)
+        response = client.models.generate_content(
             model=_MODEL,
-            max_tokens=150,
-            temperature=0.5,
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a school analytics assistant. "
-                        "Write brief, professional class summaries for teacher dashboards."
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": (
-                        f"Class data: {', '.join(context_parts)}.\n\n"
-                        "Write a single short paragraph (2–3 sentences) summarizing this class. "
-                        "Cover engagement level, academic standing, and one actionable suggestion. "
-                        "No bullet points. No preamble."
-                    ),
-                },
-            ],
+            contents=f"Class data: {', '.join(context_parts)}.\n\nWrite a single short paragraph (2-3 sentences) summarizing this class. Cover engagement level, academic standing, and one actionable suggestion. No bullet points. No preamble.",
+            config=types.GenerateContentConfig(
+                system_instruction="You are a school analytics assistant. Write brief, professional class summaries for teacher dashboards.",
+                max_output_tokens=150
+            )
         )
-        return response.choices[0].message.content.strip()
+        return response.text.strip()
 
     except Exception:
         return f"Class of {len(class_df)} students with diverse strengths."

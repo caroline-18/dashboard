@@ -748,7 +748,7 @@ def _load_exam_breakdown_raw(student_id: int, academic_yr: str) -> pd.DataFrame:
                END
         WHERE smc.student_id  = %s
           AND smc.academic_yr = %s
-          AND smc.is_present  = 'Y'
+          AND (smc.is_present = 'Y' OR JSON_LENGTH(smc.is_present) > 0)
           AND st.IsDelete     = 'N'
         GROUP BY mh.name, e.exam_id, e.name, c.name, smc.subject_id, ds.subject_name
         ORDER BY mh.name, e.name, subject_name

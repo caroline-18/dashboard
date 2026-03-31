@@ -72,6 +72,7 @@ DATABASES = {
         "PASSWORD": os.getenv("ARNOLDS_DB_PASSWORD"),
         "HOST": os.getenv("ARNOLDS_DB_HOST", "localhost"),
         "PORT": os.getenv("ARNOLDS_DB_PORT", "3306"),
+        "SOURCE_DB": os.getenv("ARNOLDS_SOURCE_DB"),
         "OPTIONS": {"charset": "utf8mb4"},
     },
     

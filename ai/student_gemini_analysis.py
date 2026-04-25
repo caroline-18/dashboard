@@ -564,7 +564,7 @@ def generate_dashboard_insight(current_student, history_df=None):
                 "a personalized learning profile will appear here."
             )
 
-        client = genai.Client(api_key=_GOOGLE_API_KEY)
+       
         response = _client.generate_content(
             contents=f"{system_prompt}\n\n{user_prompt}",
             generation_config={
@@ -626,7 +626,7 @@ def generate_class_ai_summary(class_df):
         if avg_att:
             context_parts.append(f"average attendance: {avg_att}%")
 
-        client = genai.Client(api_key=_GOOGLE_API_KEY)
+       
         response = _client.generate_content(
             model=_MODEL,
             max_tokens=150,

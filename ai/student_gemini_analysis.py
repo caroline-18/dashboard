@@ -3,7 +3,7 @@ import re
 import math
 import hashlib
 from google import genai
-from google.genai import types
+from django.conf import settings
 
 # ==================================================
 # CACHE  — avoids re-calling API for same student data

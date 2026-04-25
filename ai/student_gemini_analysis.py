@@ -26,8 +26,21 @@ def _cache_key(student: dict) -> str:
 # ==================================================
 # CONFIG
 # ==================================================
-_GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-_MODEL  = "gemini-2.5-flash"
+if not settings.GEMINI_API_KEY:
+    raise Exception("GEMINI_API_KEY missing in settings")
+
+genai.configure(api_key=settings.GEMINI_API_KEY)
+
+# keep same variable names
+_MODEL = "gemini-3.1-flash-lite-preview"   # use stable model (recommended)
+
+_client = genai.GenerativeModel(
+    _MODEL,
+    generation_config={
+        "temperature": 0.3,
+        "max_output_tokens": 2800,
+    }
+)
 
 
 # ==================================================
@@ -552,10 +565,12 @@ def generate_dashboard_insight(current_student, history_df=None):
             )
 
         client = genai.Client(api_key=_GOOGLE_API_KEY)
-        response = client.models.generate_content(
-            model=_MODEL,
-            contents=user_prompt,
-            config=types.GenerateContentConfig(system_instruction=system_prompt, max_output_tokens=400)
+        response = _client.generate_content(
+            contents=f"{system_prompt}\n\n{user_prompt}",
+            generation_config={
+                "temperature": 0.2,
+                "max_output_tokens": 400,
+            }
         )
         result = response.text.strip()
         _cache[key] = result
@@ -612,15 +627,30 @@ def generate_class_ai_summary(class_df):
             context_parts.append(f"average attendance: {avg_att}%")
 
         client = genai.Client(api_key=_GOOGLE_API_KEY)
-        response = client.models.generate_content(
+        response = _client.generate_content(
             model=_MODEL,
-            contents=f"Class data: {', '.join(context_parts)}.\n\nWrite a single short paragraph (2-3 sentences) summarizing this class. Cover engagement level, academic standing, and one actionable suggestion. No bullet points. No preamble.",
-            config=types.GenerateContentConfig(
-                system_instruction="You are a school analytics assistant. Write brief, professional class summaries for teacher dashboards.",
-                max_output_tokens=150
-            )
+            max_tokens=150,
+            temperature=0.5,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a school analytics assistant. "
+                        "Write brief, professional class summaries for teacher dashboards."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Class data: {', '.join(context_parts)}.\n\n"
+                        "Write a single short paragraph (2–3 sentences) summarizing this class. "
+                        "Cover engagement level, academic standing, and one actionable suggestion. "
+                        "No bullet points. No preamble."
+                    ),
+                },
+            ],
         )
-        return response.text.strip()
+        return response.choices[0].message.content.strip()
 
     except Exception:
         return f"Class of {len(class_df)} students with diverse strengths."

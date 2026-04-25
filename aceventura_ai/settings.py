@@ -135,3 +135,5 @@ TEACHER_ACCESS_KEY   = "teacher"
 PRINCIPAL_ACCESS_KEY = "principal"
 DEV_SCHOOL_BYPASS    = os.getenv("DEV_SCHOOL_BYPASS", "False") == "True"
 CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")

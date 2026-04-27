@@ -26,6 +26,9 @@ def _cache_key(student: dict) -> str:
 # ==================================================
 # CONFIG
 # ==================================================
+#_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+#_MODEL  = "llama-3.3-70b-versatile"
+
 if not settings.GEMINI_API_KEY:
     raise Exception("GEMINI_API_KEY missing in settings")
 
@@ -41,7 +44,6 @@ _client = genai.GenerativeModel(
         "max_output_tokens": 2800,
     }
 )
-
 
 # ==================================================
 # SUBJECT → CAREER MAPPING (ground truth)
@@ -564,7 +566,6 @@ def generate_dashboard_insight(current_student, history_df=None):
                 "a personalized learning profile will appear here."
             )
 
-       
         response = _client.generate_content(
             contents=f"{system_prompt}\n\n{user_prompt}",
             generation_config={
@@ -572,12 +573,13 @@ def generate_dashboard_insight(current_student, history_df=None):
                 "max_output_tokens": 400,
             }
         )
+
         result = response.text.strip()
         _cache[key] = result
         return result
 
     except Exception as e:
-        print(f"[ERROR] Gemini API error: {e}")
+        print(f"[ERROR] Groq API error: {e}")
         import traceback
         traceback.print_exc()
 
@@ -626,7 +628,6 @@ def generate_class_ai_summary(class_df):
         if avg_att:
             context_parts.append(f"average attendance: {avg_att}%")
 
-       
         response = _client.generate_content(
             model=_MODEL,
             max_tokens=150,

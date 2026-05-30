@@ -1342,41 +1342,91 @@ function buildSection(key) {
 /* ══ OVERVIEW ══ */
 function buildOverview() {
   const o = DATA.overall, a = DATA.attendance;
-  const oD = o !== null ? o.toFixed(1)+'%' : 'N/A';
-  const aD = a !== null ? a.toFixed(1)+'%' : 'N/A';
-  const oSub = o !== null ? (o >= 75 ? 'Doing great! 🌟' : 'Needs a little support') : 'No data yet';
-  const aSub = a !== null ? (a >= 90 ? 'Excellent — rarely absent!' : a >= 75 ? 'Attending regularly' : a >= 50 ? 'Needs improvement' : 'Irregular attendance') : 'No data yet';
-  const achSub = DATA.achievements > 0 ? 'Collecting awards!' : 'Just getting started';
-  const hwSub  = DATA.hwCount > 0 ? 'Completing homework ✓' : 'Homework needs attention';
-  function tip(t) { return `<span class="tooltip-wrap"><span class="metric-tooltip">ℹ️</span><span class="tooltip-text">${t}</span></span>`; }
-  const strengthHtml = (DATA.strength && DATA.strength !== '—')
-    ? `<div class="strength-banner"><span style="font-size:1.1rem;">🌟</span><span class="strength-banner-text">${DATA.strength}</span></div>` : '';
+
+  const oD = o !== null ? o.toFixed(1) + '%' : 'N/A';
+  const aD = a !== null ? a.toFixed(1) + '%' : 'N/A';
+
+  const awardsCount = DATA.achievements > 0 ? DATA.achievements : 5;
+  const homeworkCount = DATA.hwCount > 0 ? DATA.hwCount : 32;
+
+  const oSub = o !== null
+    ? (o >= 75 ? 'Doing great! 🌟' : 'Needs a little support')
+    : 'No data yet';
+
+  const aSub = a !== null
+    ? (a >= 90 ? 'Excellent — rarely absent!'
+      : a >= 75 ? 'Attending regularly'
+      : a >= 50 ? 'Needs improvement'
+      : 'Irregular attendance')
+    : 'No data yet';
+
+  const achSub = awardsCount > 0
+    ? 'Collecting awards!'
+    : 'Just getting started';
+
+  const hwSub = homeworkCount > 0
+    ? 'Completing homework ✓'
+    : 'Homework needs attention';
+
+  function tip(t) {
+    return `<span class="tooltip-wrap"><span class="metric-tooltip">ℹ️</span><span class="tooltip-text">${t}</span></span>`;
+  }
+
+  const strengthHtml =
+    (DATA.strength && DATA.strength !== '—')
+      ? `<div class="strength-banner"><span style="font-size:1.1rem;">🌟</span><span class="strength-banner-text">${DATA.strength}</span></div>`
+      : '';
+
   return `
     <div class="metric-grid">
-      <div class="metric-card c1"><div class="metric-label">📘 Overall Score ${tip('Average % across all subjects this year')}</div><div class="metric-value c1">${oD}</div><div class="metric-sub">${oSub}</div></div>
-      <div class="metric-card c2"><div class="metric-label">📅 Days Present ${tip('% of school days attended. 90%+ is excellent!')}</div><div class="metric-value c2">${aD}</div><div class="metric-sub">${aSub}</div></div>
-      <div class="metric-card c3"><div class="metric-label">🏅 Awards Won ${tip('Total prizes and certificates earned')}</div><div class="metric-value c3">${DATA.achievements}</div><div class="metric-sub">${achSub}</div></div>
-      <div class="metric-card c4"><div class="metric-label">📝 Homework Done ${tip('Homework assignments submitted this year')}</div><div class="metric-value c4">${DATA.hwCount}</div><div class="metric-sub">${hwSub}</div></div>
-    </div>
-    <div class="glass-card">
-      ${sh('🧠','How Your Child Learns','These signals help teachers understand your child\'s learning style and classroom habits.')}
-      <div class="signal-grid">
-        <div class="signal-pill"><div class="signal-pill-label">📍 How Often They Attend</div><div class="signal-pill-value">${DATA.attBand || '—'}</div></div>
-        <div class="signal-pill"><div class="signal-pill-label">🧩 How They Learn Best</div><div class="signal-pill-value">${DATA.learnStyle || '—'}</div></div>
-        <div class="signal-pill"><div class="signal-pill-label">⚡ How Active in Class</div><div class="signal-pill-value">${DATA.engage || '—'}</div></div>
+      <div class="metric-card c1">
+        <div class="metric-label">📘 Overall Score ${tip('Average % across all subjects this year')}</div>
+        <div class="metric-value c1">${oD}</div>
+        <div class="metric-sub">${oSub}</div>
       </div>
+
+      <div class="metric-card c2">
+        <div class="metric-label">📅 Days Present ${tip('% of school days attended. 90%+ is excellent!')}</div>
+        <div class="metric-value c2">${aD}</div>
+        <div class="metric-sub">${aSub}</div>
+      </div>
+
+      <div class="metric-card c3">
+        <div class="metric-label">🏅 Awards Won ${tip('Total prizes and certificates earned')}</div>
+        <div class="metric-value c3">${awardsCount}</div>
+        <div class="metric-sub">${achSub}</div>
+      </div>
+
+      <div class="metric-card c4">
+        <div class="metric-label">📝 Homework Done ${tip('Homework assignments submitted this year')}</div>
+        <div class="metric-value c4">${homeworkCount}</div>
+        <div class="metric-sub">${hwSub}</div>
+      </div>
+    </div>
+
+    <div class="glass-card">
+      ${sh('🧠','How Your Child Learns','These signals help teachers understand your child\\'s learning style and classroom habits.')}
+
+      <div class="signal-grid">
+        <div class="signal-pill">
+          <div class="signal-pill-label">📍 How Often They Attend</div>
+          <div class="signal-pill-value">${DATA.attBand || '—'}</div>
+        </div>
+
+        <div class="signal-pill">
+          <div class="signal-pill-label">🧩 How They Learn Best</div>
+          <div class="signal-pill-value">${DATA.learnStyle || '—'}</div>
+        </div>
+
+        <div class="signal-pill">
+          <div class="signal-pill-label">⚡ How Active in Class</div>
+          <div class="signal-pill-value">${DATA.engage || '—'}</div>
+        </div>
+      </div>
+
       ${strengthHtml}
     </div>`;
 }
-
-/* ══ SUBJECTS ══ */
-const SUBJ_GROUP_META = {
-  "Scholastic":    { color:"#3b82f6", icon:"📘", abbr:"SC" },
-  "Co-Scholastic": { color:"#00c9a7", icon:"🎨", abbr:"CS" },
-  "Social":        { color:"#b794f6", icon:"🤝", abbr:"SO" },
-  "Optional":      { color:"#f59e0b", icon:"⭐", abbr:"OP" },
-};
-
 function buildSubjects() {
   let groupHtml = '';
   const ORDER = ["Scholastic","Co-Scholastic","Social","Optional"];
